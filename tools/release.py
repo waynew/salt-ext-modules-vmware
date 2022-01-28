@@ -65,6 +65,14 @@ def msg_wrap(msg):
         print("OK")
 
 
+@contextlib.contextmanager
+def make_archive(path):
+    try:
+        yield
+    finally:
+        run_and_log_cmd("tar", "-czf", path, "-C", os.getcwd(), ".")
+
+
 ########################
 # End Helper Functions #
 ########################
@@ -260,7 +268,14 @@ def commit_changlog_entries(*, version):
             )
         finally:
             os.chdir(pwd)
-        ret = run_and_log_cmd
+        ret = run_and_log_cmd(
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "commit",
+            "-m",
+            f"Changelog for release {version}",
+        )
 
 
 def twine_check_package(*, dist_dir, version):
@@ -305,9 +320,10 @@ def deploy_to_real_pypi(*, dist_dir, version):
 
 
 def tag_deployment(*, version):
+    changelog_path = pathlib.Path(f"changelog-{version}.txt").resolve()
     with msg_wrap(f"Tagging version {version}"):
         ret = run_and_log_cmd(
-            "git", "-C", str(REPO_ROOT), "tag", "-F", f"changelog-{version}.txt", "-a", version
+            "git", "-C", str(REPO_ROOT), "tag", "-F", str(changelog_path), "-a", version
         )
         if ret.returncode:
             exit(1)
@@ -317,7 +333,12 @@ def push_tag_to_salt(*, version):
     with msg_wrap(f"Pushing tag {version} to salt repo"):
         # TODO: salt not wayne
         ret = run_and_log_cmd(
-            "git", "push", "git+ssh://git@github.com/waynew/salt-ext-modules-vmware.git", version
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "push",
+            "git+ssh://git@github.com/waynew/salt-ext-modules-vmware.git",
+            version,
         )
         if ret.returncode:
             exit("Pushing tag failed")
@@ -346,92 +367,42 @@ def do_it(non_interactive=False):  # Shia LeBeouf!
         # None of these make system changes. Can totally bail out without
         # screwing anything up here.
         version = check_mod_version()
-        print("Releasing version {version}")
-        print(f"Path to venv python: {VENV_PYTHON}")
-        check_python_env()
-        check_pypirc()
-        check_git_status()
-        check_gpg()
+        with make_archive(f"/tmp/saltext.vmware-build-{version}.tar.gz"):
+            print("Releasing version {version}")
+            print(f"Path to venv python: {VENV_PYTHON}")
+            check_python_env()
+            check_pypirc()
+            check_git_status()
+            check_gpg()
 
-        # Here's where we start to make changes!
-        keep_going = (
-            non_interactive
-            or input(f"Continue to build and test saltext.vmware version {version}? [y/N]: ")
-            .lower()
-            .strip()
-            in YES
-        )
-        if not keep_going:
-            exit("Abort")
+            # Here's where we start to make changes!
+            keep_going = (
+                non_interactive
+                or input(f"Continue to build and test saltext.vmware version {version}? [y/N]: ")
+                .lower()
+                .strip()
+                in YES
+            )
+            if not keep_going:
+                exit("Abort")
 
-        ensure_venv_deps()
-        commit_changlog_entries(version=version)
-        build_package(dist_dir=dist_dir)
-        twine_check_package(dist_dir=dist_dir, version=version)
-        # test_package(tempdir=tempdir, dist_dir=dist_dir)
-        prepare_deployment(dist_dir=dist_dir, version=version)
-        deploy_to_test_pypi(dist_dir=dist_dir, version=version)
-        deploy_to_real_pypi(dist_dir=dist_dir, version=version)
-        tag_deployment(version=version)
-        push_tag_to_salt(version=version)
+            ensure_venv_deps()
+            commit_changlog_entries(version=version)
+            build_package(dist_dir=dist_dir)
+            twine_check_package(dist_dir=dist_dir, version=version)
+            # test_package(tempdir=tempdir, dist_dir=dist_dir)
+            prepare_deployment(dist_dir=dist_dir, version=version)
+            deploy_to_test_pypi(dist_dir=dist_dir, version=version)
+            deploy_to_real_pypi(dist_dir=dist_dir, version=version)
+            tag_deployment(version=version)
+            push_tag_to_salt(version=version)
 
-        input(f"enter to finish and cleanup - {tempdir} will be deleted")
+            input(
+                f"enter to finish and cleanup - {tempdir} will be archived at /tmp/saltext.vmware-build-{version}.tar.gz"
+            )
 
     os.chdir(pwd)
 
 
-def fake_it():
-    import time
-
-    keep_going = input("Building release version 22.01.06, continue? [y/N]: ")
-    with msg_wrap("Generating changelog/release for commit"):
-        time.sleep(0.5)
-
-    with msg_wrap("Creating dev dir"):
-        time.sleep(0.5)
-
-    with msg_wrap("Creating venv for tests"):
-        time.sleep(0.5)
-
-    with msg_wrap("Building package wheels"):
-        time.sleep(0.5)
-
-    with msg_wrap("Installing saltext.vmware"):
-        time.sleep(1)
-
-    with msg_wrap("Running full test suite via nox"):
-        time.sleep(1)
-
-    with msg_wrap("Running tests via pytest"):
-        time.sleep(5)
-
-    keep_going = input("Tests are passing. Continue to sign package, deploy to dev pypi? [y/N]: ")
-
-    with msg_wrap("Signing .whl"):
-        time.sleep(0.5)
-
-    with msg_wrap("Deploying build and signature to dev pypi"):
-        time.sleep(2)
-
-    print(
-        "Deploy to dev pypi successful. See https://test.pypi.org/project/saltext.vmware/ to confirm."
-    )
-
-    keep_going = input("Deploy to prod pypi? [y/N]: ")
-
-    with msg_wrap("Deploying build and signature to prod pypi"):
-        time.sleep(2)
-
-    with msg_wrap("Tagging release commit"):
-        time.sleep(0.5)
-
-    with msg_wrap("Pushing release tag to GitHub"):
-        time.sleep(2)
-
-    keep_artifacts = input("Release complete! Keep build artifacts around? [Y/n]: ")
-    print("All done, good job!")
-
-
 if __name__ == "__main__":
     do_it()
-    # fake_it()
