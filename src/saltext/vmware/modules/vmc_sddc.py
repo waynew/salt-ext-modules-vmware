@@ -103,6 +103,17 @@ def __virtual__():
 ## from minion config+pillar+grains. Can't pass pillar='{"some pillar":
 ## "data"}' when calling modules directly, but can using `module.run` state or
 ## just when calling states in general
+
+## the mysql module has a useful, though maybe super complicated example, for
+## how to default to use provided connection info over what config.get returns.
+
+## it's probably useful reference material but it should not be directly copied
+## -- it's probably a little more complex than what we need.
+
+## we may want a `utils.vmc` (or potentially more than just vmc??) method for
+## getting arguments from the config if they're not provided, especially if we
+## are using vmware: vmc: sddc: ... style config. This probably would benefit
+## from a larger discussion with others in the extension module teams
 def example(blarp=None, some_key=None, another=None, **connection_args):
     #    verify_ssl = __salt__['config.get']('vmware:verify_ssl', True)
     #    verify_ssl = __salt__['config.get']('vmware:vmc:verify_ssl', True)
@@ -112,6 +123,12 @@ def example(blarp=None, some_key=None, another=None, **connection_args):
     some_key = connection_args.get("some_key", __salt__["config.get"]("vmware:vmc:example"))
     some_key = some_key or __salt__["config.get"]("vmware:vmc:example", some_key)
     return "Hello! key={!r} blarp={!r} another={!r}".format(some_key, blarp, another)
+
+
+# horrible name, it should be better
+def _filter_kwargs(provided_via_cli, defaults):
+    # TODO some sort of defaults for this module
+    return utils._filter_kwargs(provided_via_cli, defaults)
 
 
 def get(
