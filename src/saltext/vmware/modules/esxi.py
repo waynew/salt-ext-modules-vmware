@@ -274,6 +274,7 @@ def list_services(
 
     try:
         for h in hosts:
+            h.fork()
             host_service = h.configManager.serviceSystem
             ret[h.name] = {}
             if not host_service:
@@ -301,6 +302,10 @@ def list_services(
     except DEFAULT_EXCEPTIONS as exc:
         raise salt.exceptions.SaltException(str(exc))
     return ret
+
+
+def do_something():
+    return __opts__["foo"]
 
 
 def get_acceptance_level(

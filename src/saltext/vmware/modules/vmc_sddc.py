@@ -1,5 +1,83 @@
 """
+NOTE: not everything in here is a perfect example, and some things probably
+need a little more thought/design (in particular the config structure). It's
+a good start, though.
+
+---
+
 Manage VMware VMC SDDC
+
+### this information VVVVV is mostly from the salt/modules/config.py::get
+documentation - can go look at that file or just use `python -c
+'help("salt.modules.config.get")'` to use the Python docstring help. You will
+have to have a virtualenv activated, or salt installed in that particular
+python
+
+Configuration
+=============
+
+In order to connect to VMC SDDC, certain configuration arguments must be set.
+The config will be loaded via Salt's config.get module, so the precedence is:
+
+
+## We want to use command-line args first, if they're passed in. Otherwise we
+## should definitely use minion config (i.e. __salt__['config.get'])
+
+* command-line args
+
+* minion config
+* minion grains
+* minion pillar data
+
+A complete config example is:
+
+.. code:: yaml
+
+    vmware:
+      cert: /path/to/some/server.crt
+      vmc:
+        hostname: stg.skyscraper.example.com
+        authorization_host: console.example.com
+        sddc:
+          org_id: abcd1234
+          id: 4321abc
+
+
+## We do want to document the config values and what they mean. Also should
+## provide some CLI Example(s) for each module function (this stuff below was
+## just copied from the get_by_id function
+
+If you are managing more than one SDDC then you can specify the SDDC ID as a
+command line arg:
+
+
+    CLI Example:
+
+        salt some-minion vmc_sddc.get_by_id abcd12345
+
+
+    hostname
+        The host name of VMC
+
+    refresh_key
+        API Token of the user which is used to get the Access Token required for VMC operations
+
+    authorization_host
+        Hostname of the Cloud Services Platform (CSP)
+
+    org_id
+        The Id of organization to which the SDDC belongs to
+
+    sddc_id
+        sddc_id from which vcenter details should be retrieved
+
+    verify_ssl
+        (Optional) Option to enable/disable SSL verification. Enabled by default.
+        If set to False, the certificate validation is skipped.
+
+    cert
+        (Optional) Path to the SSL client certificate file to connect to VMC Cloud Console.
+        The certificate can be retrieved from browser.
 """
 import logging
 
@@ -12,9 +90,28 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "vmc_sddc"
 
+"""
+
+"""
+
 
 def __virtual__():
     return __virtualname__
+
+
+## Definitely not a perfect example but kind of shows how to get config values
+## from minion config+pillar+grains. Can't pass pillar='{"some pillar":
+## "data"}' when calling modules directly, but can using `module.run` state or
+## just when calling states in general
+def example(blarp=None, some_key=None, another=None, **connection_args):
+    #    verify_ssl = __salt__['config.get']('vmware:verify_ssl', True)
+    #    verify_ssl = __salt__['config.get']('vmware:vmc:verify_ssl', True)
+    some_key = connection_args.get("some_key") or __salt__["config.get"](
+        "vmware:vmc:example", some_key
+    )
+    some_key = connection_args.get("some_key", __salt__["config.get"]("vmware:vmc:example"))
+    some_key = some_key or __salt__["config.get"]("vmware:vmc:example", some_key)
+    return "Hello! key={!r} blarp={!r} another={!r}".format(some_key, blarp, another)
 
 
 def get(
@@ -82,9 +179,7 @@ def get(
     )
 
 
-def get_by_id(
-    hostname, refresh_key, authorization_host, org_id, sddc_id, verify_ssl=True, cert=None
-):
+def get_by_id(sddc_id, **connection_args):
     """
     Returns a SDDC detail for the given SDDC Id
 
