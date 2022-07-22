@@ -152,7 +152,8 @@ linkcheck_timeout = 10
 if not os.environ.get("SKIP_LINKCHECK_IGNORE"):
     linkcheck_ignore = ["https://docs.github.com/en/authentication/connecting-to-github-with-ssh"]
 
-
+smv_released_pattern = r"^.*rc\d+"
+smv_latest_version = "test/version-docs"
 
 def setup(app):
     app.add_crossref_type(
