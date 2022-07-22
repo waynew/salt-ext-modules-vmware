@@ -73,6 +73,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinxcontrib.spelling",
+    "sphinx_multiversion",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -151,6 +152,9 @@ linkcheck_timeout = 10
 if not os.environ.get("SKIP_LINKCHECK_IGNORE"):
     linkcheck_ignore = ["https://docs.github.com/en/authentication/connecting-to-github-with-ssh"]
 
+
+smv_branch_whitelist = None
+smv_remote_whitelist = None
 
 def setup(app):
     app.add_crossref_type(
