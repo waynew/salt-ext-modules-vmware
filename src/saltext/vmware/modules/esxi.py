@@ -675,11 +675,7 @@ def set_advanced_config(
 
 
 def get_all_firewall_configs(
-    datacenter_name=None,
-    cluster_name=None,
-    host_name=None,
-    service_instance=None,
-    profile=None
+    datacenter_name=None, cluster_name=None, host_name=None, service_instance=None, profile=None
 ):
     """
     Get Firewall configurations on matching ESXi hosts.
@@ -2249,7 +2245,7 @@ def get_role(role_name, esxi_host_name=None, service_instance=None, profile=None
     log.debug("Running vmware_esxi.get_role")
     ret = {}
     if not service_instance:
-        service_instance = get_service_instance(config=__salt__, esxi_host=esxi_host_name)
+        service_instance = get_service_instance(config=__opts__, esxi_host=esxi_host_name)
     try:
         for role in service_instance.content.authorizationManager.roleList:
             if role.name == role_name:
