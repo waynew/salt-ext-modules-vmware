@@ -21,6 +21,11 @@ def tgz_file(session_temp_dir):
     yield tgz
 
 
+@pytest.fixture
+def configure_loader_modules():
+    return {esxi: {"__opts__": {}, "__pillar__": {}}}
+
+
 @pytest.fixture(autouse=True)
 def patch_salt_loaded_objects():
     # This esxi needs to be the same as the module we're importing
@@ -95,16 +100,25 @@ def get_host(in_maintenance_mode=None):
         ["shutdown", "ShutdownHost_Task"],
     ],
 )
-def test_esxi_power_state(monkeypatch, hosts, state, fn, fn_calls, expected):
-    setattr(saltext.vmware.modules.esxi, "__opts__", MagicMock())
-    setattr(saltext.vmware.modules.esxi, "__pillar__", MagicMock())
-    monkeypatch.setattr(saltext.vmware.modules.esxi, "get_service_instance", MagicMock())
-    monkeypatch.setattr(saltext.vmware.utils.esxi, "get_hosts", MagicMock(return_value=hosts))
-    monkeypatch.setattr(saltext.vmware.utils.common, "wait_for_task", MagicMock())
-    ret = esxi.power_state(state=state)
+def test_esxi_power_state(hosts, state, fn, fn_calls, expected, fake_service_instance):
+    _, service_instance = fake_service_instance
+
+    patch_get_hosts = patch(
+        "saltext.vmware.utils.esxi.get_hosts", autospec=True, return_value=hosts
+    )
+    patch_wait_for_task = patch(
+        "saltext.vmware.utils.common.wait_for_task", autospec=True, return_value=None
+    )
+
+    with patch_get_hosts, patch_wait_for_task:
+        ret = esxi.power_state(state=state, service_instance=service_instance)
+
     cnt = 0
     for h in hosts:
-        cnt += getattr(h, fn).call_count
+        mock_func = getattr(h, fn)
+        cnt += mock_func.call_count
+        # the get_host() fixtures are shared between other test runs
+        mock_func.reset_mock()
     assert cnt == fn_calls
     assert ret is expected
 
