@@ -85,7 +85,17 @@ def integration_test_config():
 
     try:
         with config_path.open() as f:
-            return json.load(f)
+            # TODO: remove this part, also everything from the above bits
+            config = json.load(f)
+            # override the old style config values with whatever is in the blueprint
+            # TODO: this should eventually be instead of `config.update({...})`, simply `config = {...}`
+            # TODO: This should REALLY eventually actually set up the vSphere environment to the specific values that we want, e.g. create ova/ovf files from test data, create specific folder layouts, etc. etc. -W. Werner, 2022-11-07
+            config.update(
+                {
+                    "stuff": "goes here",
+                },
+            )
+            return config
     except Exception as e:  # pylint: disable=broad-except
         return None
 
