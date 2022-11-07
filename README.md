@@ -40,6 +40,17 @@ The [Salt Contributing guide][salt-contributing] has a lot of relevant informati
     # Install extension + test/dev/doc dependencies into your environment
     python -m pip install -e .\[tests,dev,docs\]
 
+    # Add your vSphere connection pillar data
+    # Note: Replace the credentials with your actual vSphere connection
+    # credentials and host name or IP address!
+    mkdir -p local
+    cat <<EOF> local/saltext_vmware.sls
+    saltext.vmware:
+      host: 203.0.113.42
+      password: CorrectHorseBatteryStaple
+      user: admin@example.com
+    EOF
+
     # Run tests!
     python -m nox -e tests-3
 

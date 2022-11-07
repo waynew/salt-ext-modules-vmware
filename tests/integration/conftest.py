@@ -32,7 +32,7 @@ from saltext.vmware.utils.connect import get_service_instance
 def master(master):
     # This ensures that there exists some (potential) pillar data in the
     # environment
-    default_path = Path(__file__).parent.parent.parent / "local" / "saltext.vmware.sls"
+    default_path = Path(__file__).parent.parent.parent / "local" / "saltext_vmware.sls"
     config_path = Path(os.environ.get("SALTEXT_VMWARE_CONFIG", default_path))
     assert config_path.exists(), f"Config path {str(config_path)} does not exist."
 
