@@ -30,6 +30,25 @@ from saltext.vmware.utils.connect import get_service_instance
 
 @pytest.fixture(scope="package")
 def master(master):
+    # This ensures that there exists some (potential) pillar data in the
+    # environment
+    default_path = Path(__file__).parent.parent.parent / "local" / "saltext.vmware.sls"
+    config_path = Path(os.environ.get("SALTEXT_VMWARE_CONFIG", default_path))
+    assert config_path.exists(), f"Config path {str(config_path)} does not exist."
+
+    # Now we copy the pillar data into the test environment. There may be
+    # another way to do this, but it should work for our needs
+    pillar_base = Path(master.config["pillar_roots"]["base"][0]) / "integration.sls"
+    top_file = pillar_base.with_name("top.sls")
+    top_file.write_text(
+        f"""
+base:
+  '*':
+    - {pillar_base.with_suffix('').name}
+"""
+    )
+    pillar_base.write_text(config_path.read_text())
+
     with master.started():
         yield master
 
